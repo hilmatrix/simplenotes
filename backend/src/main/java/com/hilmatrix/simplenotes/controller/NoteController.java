@@ -81,9 +81,6 @@ public class NoteController {
             String noteSql = "SELECT id, title, content FROM notes WHERE user_id = ? AND id = ?";
             Map<String, Object> note = jdbcTemplate.queryForMap(noteSql, userId, noteId);
 
-            System.out.println("userId = " +userId);
-            System.out.println("noteId = " +noteId);
-
             if (note == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Note not found for id: " + noteId);
             }
@@ -96,6 +93,60 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error retrieving note");
         }
     }
+
+    @PostMapping
+    public ResponseEntity<?> createNote(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, Object> noteData) {
+        try {
+            // Extract the token from the Authorization header
+            String token = authorizationHeader.replace("Bearer ", "");
+
+            // Decode the JWT using JwtDecoder
+            Jwt jwt = jwtDecoder.decode(token);
+
+            // Extract email from the decoded JWT
+            String email = jwt.getSubject();  // Assuming the email is the subject in the JWT
+
+            // Query the users table to get the user_id based on the email
+            String sql = "SELECT id FROM users WHERE email = ?";
+            Integer userId = jdbcTemplate.queryForObject(sql, Integer.class, email);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found for email: " + email);
+            }
+
+            // Retrieve note data from the request body
+            String title = (String) noteData.get("title");
+            String content = (String) noteData.get("content");
+
+            // Find the current max ID in the notes table and increment it for the new ID
+            String maxIdSql = "SELECT COALESCE(MAX(id), 0) + 1 FROM notes";
+            Integer newNoteId = jdbcTemplate.queryForObject(maxIdSql, Integer.class);
+
+            // Insert the new note
+            String insertSql = "INSERT INTO notes (id, user_id, title, content) VALUES (?, ?, ?, ?)";
+            int rowsInserted = jdbcTemplate.update(insertSql, newNoteId, userId, title, content);
+
+            if (rowsInserted > 0) {
+                // Return the created note's ID and details
+                Map<String, Object> response = Map.of(
+                        "id", newNoteId,
+                        "user_id", userId,
+                        "title", title,
+                        "content", content
+                );
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to create note");
+            }
+
+        } catch (Exception e) {
+            // If decoding fails or any other exception occurs
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error creating note");
+        }
+    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateNoteById(

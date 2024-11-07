@@ -65,6 +65,11 @@ export default function Home() {
     router.push(`/notes/${id}`); // Navigate to /notes/{id}
   };
 
+  // Navigate to create a new note page
+  const handleCreateNote = () => {
+    router.push('/newnote'); // Navigate to /newnote
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', backgroundColor: '#f9f9f9', borderRadius: '10px' }}>
       {!isLoggedIn ? (
@@ -95,6 +100,12 @@ export default function Home() {
             style={{ width: '100%', padding: '10px', backgroundColor: '#DC3545', color: '#fff' }}
           >
             Logout
+          </button>
+          <button
+            onClick={handleCreateNote}
+            style={{ width: '100%', padding: '10px', backgroundColor: '#28A745', color: '#fff', marginTop: '10px' }}
+          >
+            Create a new note
           </button>
           <h2>Your Notes</h2>
           <div style={{ display: 'grid', gap: '10px' }}>
