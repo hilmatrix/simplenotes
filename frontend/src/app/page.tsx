@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -111,6 +111,9 @@ export default function Home() {
           />
           <button onClick={handleLogin} style={{ width: '100%', padding: '10px', backgroundColor: '#007BFF', color: '#fff' }}>
             Login
+          </button>
+          <button onClick={() => router.push('/signup')} style={{ width: '100%', padding: '10px', backgroundColor: '#6c757d', color: '#fff', marginTop: '10px' }}>
+            Sign Up
           </button>
         </div>
       ) : (

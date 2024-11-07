@@ -47,7 +47,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Disable CORS for testing
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for easier access from different clients
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/login").permitAll()  // Explicitly allow access to "/login"
+                        .requestMatchers("/login").permitAll()
+                        .requestMatchers("/signup").permitAll()// Explicitly allow access to "/login"
                         .requestMatchers("/").permitAll()  // Allow unrestricted access to "/"
                         .anyRequest().authenticated()  // Require authentication for other requests
                 )
