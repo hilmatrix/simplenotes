@@ -198,4 +198,51 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error updating note");
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteNoteById(
+            @PathVariable("id") Integer noteId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Extract the token from the Authorization header
+            String token = authorizationHeader.replace("Bearer ", "");
+
+            // Decode the JWT using JwtDecoder
+            Jwt jwt = jwtDecoder.decode(token);
+
+            // Extract email from the decoded JWT
+            String email = jwt.getSubject();  // Assuming the email is the subject in the JWT
+
+            // Query the users table to get the user_id based on the email
+            String sql = "SELECT id FROM users WHERE email = ?";
+            Integer userId = jdbcTemplate.queryForObject(sql, Integer.class, email);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found for email: " + email);
+            }
+
+            // Check if the note exists for the user
+            String checkNoteSql = "SELECT COUNT(*) FROM notes WHERE user_id = ? AND id = ?";
+            Integer count = jdbcTemplate.queryForObject(checkNoteSql, Integer.class, userId, noteId);
+
+            if (count == null || count == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Note not found for id: " + noteId);
+            }
+
+            // Delete the note
+            String deleteSql = "DELETE FROM notes WHERE id = ? AND user_id = ?";
+            int rowsDeleted = jdbcTemplate.update(deleteSql, noteId, userId);
+
+            if (rowsDeleted > 0) {
+                return ResponseEntity.ok("Note deleted successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete note");
+            }
+
+        } catch (Exception e) {
+            // If decoding fails or any other exception occurs
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error deleting note");
+        }
+    }
+
 }

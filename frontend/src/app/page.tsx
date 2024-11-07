@@ -1,15 +1,15 @@
 "use client"
 
-import { useRouter } from 'next/navigation'; // Import useRouter for navigation
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from './AuthContext'; // Import useAuth hook
+import { useAuth } from './AuthContext';
 
 export default function Home() {
   const { token, isLoggedIn, login, logout } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [notes, setNotes] = useState([]);
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
 
   // Fetch notes if logged in
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function Home() {
 
     if (response.ok) {
       const data = await response.json();
-      login(data.token);  // Use login from context
+      login(data.token);
       fetchNotes(data.token);
     } else {
       alert('Login Failed');
@@ -39,7 +39,7 @@ export default function Home() {
 
   // Handle logout
   const handleLogout = () => {
-    logout();  // Use logout from context
+    logout();
     setNotes([]);
   };
 
@@ -62,12 +62,32 @@ export default function Home() {
 
   // Handle navigation to the edit page
   const handleEdit = (id) => {
-    router.push(`/notes/${id}`); // Navigate to /notes/{id}
+    router.push(`/notes/${id}`);
   };
 
-  // Navigate to create a new note page
+  // Handle creating a new note
   const handleCreateNote = () => {
-    router.push('/newnote'); // Navigate to /newnote
+    router.push('/newnote');
+  };
+
+  // Handle deleting a note with confirmation dialog
+  const handleDelete = async (id) => {
+    const confirmed = confirm("Are you sure you want to delete this note?");
+    if (!confirmed) return;
+
+    const response = await fetch(`http://localhost:8080/notes/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      alert("Note deleted successfully");
+      setNotes(notes.filter(note => note.id !== id)); // Update local notes list
+    } else {
+      alert("Failed to delete the note");
+    }
   };
 
   return (
@@ -122,7 +142,7 @@ export default function Home() {
                 <h3>{note.title}</h3>
                 <p>{note.content}</p>
                 <button
-                  onClick={() => handleEdit(note.id)} // Trigger navigation to edit page
+                  onClick={() => handleEdit(note.id)}
                   style={{
                     backgroundColor: '#007BFF',
                     color: '#fff',
@@ -133,6 +153,20 @@ export default function Home() {
                   }}
                 >
                   Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(note.id)}
+                  style={{
+                    backgroundColor: '#FF6347',
+                    color: '#fff',
+                    padding: '5px 10px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    marginTop: '10px',
+                    marginLeft: '10px',
+                  }}
+                >
+                  Delete
                 </button>
               </div>
             ))}
