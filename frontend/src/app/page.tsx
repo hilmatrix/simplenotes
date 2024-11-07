@@ -1,23 +1,22 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
+import { useEffect, useState } from 'react';
+import { useAuth } from './AuthContext'; // Import useAuth hook
 
 export default function Home() {
+  const { token, isLoggedIn, login, logout } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notes, setNotes] = useState([]);
-  const [token, setToken] = useState(null);
+  const router = useRouter(); // Initialize the router
 
-  // Check if the user is logged in when the component mounts
+  // Fetch notes if logged in
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      setToken(savedToken);
-      setIsLoggedIn(true);
-      fetchNotes(savedToken);
+    if (token) {
+      fetchNotes(token);
     }
-  }, []);
+  }, [token]);
 
   // Handle login
   const handleLogin = async () => {
@@ -31,11 +30,8 @@ export default function Home() {
 
     if (response.ok) {
       const data = await response.json();
-      const token = data.token;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setIsLoggedIn(true);
-      fetchNotes(token);
+      login(data.token);  // Use login from context
+      fetchNotes(data.token);
     } else {
       alert('Login Failed');
     }
@@ -43,9 +39,7 @@ export default function Home() {
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setIsLoggedIn(false);
+    logout();  // Use logout from context
     setNotes([]);
   };
 
@@ -64,6 +58,11 @@ export default function Home() {
     } else {
       alert('Failed to fetch notes');
     }
+  };
+
+  // Handle navigation to the edit page
+  const handleEdit = (id) => {
+    router.push(`/notes/${id}`); // Navigate to /notes/{id}
   };
 
   return (
@@ -111,6 +110,19 @@ export default function Home() {
               >
                 <h3>{note.title}</h3>
                 <p>{note.content}</p>
+                <button
+                  onClick={() => handleEdit(note.id)} // Trigger navigation to edit page
+                  style={{
+                    backgroundColor: '#007BFF',
+                    color: '#fff',
+                    padding: '5px 10px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    marginTop: '10px',
+                  }}
+                >
+                  Edit
+                </button>
               </div>
             ))}
           </div>

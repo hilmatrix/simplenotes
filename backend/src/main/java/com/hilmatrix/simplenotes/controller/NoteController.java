@@ -6,10 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -57,6 +54,97 @@ public class NoteController {
         } catch (Exception e) {
             // If decoding fails or any other exception occurs
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error retrieving notes");
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getNoteById(@PathVariable("id") Integer noteId, @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Extract the token from the Authorization header
+            String token = authorizationHeader.replace("Bearer ", "");
+
+            // Decode the JWT using JwtDecoder
+            Jwt jwt = jwtDecoder.decode(token);
+
+            // Extract email from the decoded JWT
+            String email = jwt.getSubject();  // Assuming the email is the subject in the JWT
+
+            // Query the users table to get the user_id based on the email
+            String sql = "SELECT id FROM users WHERE email = ?";
+            Integer userId = jdbcTemplate.queryForObject(sql, Integer.class, email);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found for email: " + email);
+            }
+
+            // Query the notes table to get the note by id for the user_id
+            String noteSql = "SELECT id, title, content FROM notes WHERE user_id = ? AND id = ?";
+            Map<String, Object> note = jdbcTemplate.queryForMap(noteSql, userId, noteId);
+
+            System.out.println("userId = " +userId);
+            System.out.println("noteId = " +noteId);
+
+            if (note == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Note not found for id: " + noteId);
+            }
+
+            // Return the note including the id, title, and content
+            return ResponseEntity.ok(note);
+
+        } catch (Exception e) {
+            // If decoding fails or any other exception occurs
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error retrieving note");
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateNoteById(
+            @PathVariable("id") Integer noteId,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, Object> noteData) {
+        try {
+            // Extract the token from the Authorization header
+            String token = authorizationHeader.replace("Bearer ", "");
+
+            // Decode the JWT using JwtDecoder
+            Jwt jwt = jwtDecoder.decode(token);
+
+            // Extract email from the decoded JWT
+            String email = jwt.getSubject();  // Assuming the email is the subject in the JWT
+
+            // Query the users table to get the user_id based on the email
+            String sql = "SELECT id FROM users WHERE email = ?";
+            Integer userId = jdbcTemplate.queryForObject(sql, Integer.class, email);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found for email: " + email);
+            }
+
+            // Retrieve note data from the request body
+            String title = (String) noteData.get("title");
+            String content = (String) noteData.get("content");
+
+            // Check if the note exists for the user
+            String checkNoteSql = "SELECT COUNT(*) FROM notes WHERE user_id = ? AND id = ?";
+            Integer count = jdbcTemplate.queryForObject(checkNoteSql, Integer.class, userId, noteId);
+
+            if (count == null || count == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Note not found for id: " + noteId);
+            }
+
+            // Update the note
+            String updateSql = "UPDATE notes SET title = ?, content = ? WHERE id = ? AND user_id = ?";
+            int rowsUpdated = jdbcTemplate.update(updateSql, title, content, noteId, userId);
+
+            if (rowsUpdated > 0) {
+                return ResponseEntity.ok("Note updated successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update note");
+            }
+
+        } catch (Exception e) {
+            // If decoding fails or any other exception occurs
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("JWT is invalid or error updating note");
         }
     }
 }
